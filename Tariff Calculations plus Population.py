@@ -1,58 +1,54 @@
-# Step 1: Import Libraries
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
+import streamlit as st
 
-# URL του CSV αρχείου στο GitHub
+# URL to CSV file on GitHub
 url = 'https://raw.githubusercontent.com/KonstantinosVoulgaris/USA-TARIFFS/main/Tariff%20Calculations%20plus%20Population.csv'
 
-# Ανάγνωση του CSV από το GitHub
-df = pd.read_csv(url, sep=';')
+# Load the dataset
+@st.cache
+def load_data():
+    df = pd.read_csv(url, sep=';')
+    return df
 
-# Πρώτες γραμμές του dataset
-print(df.head())
+df = load_data()
 
-# Optional: Display settings
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
+# Streamlit App
+st.title('USA Tariffs and Population Analysis')
 
-# Step 4: Initial Dataset Info
-print("\nShape of dataset:", df.shape)
-print("\nColumn Names:", df.columns.tolist())
-print("\nMissing Values:\n", df.isnull().sum())
+# Display first few rows of data
+if st.checkbox('Show raw data'):
+    st.write(df)
 
-# Step 5: Data Cleaning
-
-# Fill NaN in 'Tariff' with 0 if it exists
-if 'Tariff' in df.columns:
-    df['Tariff'] = df['Tariff'].fillna(0)
-
-# Drop rows missing critical fields (e.g., Country, Population)
+# Data Cleaning
+df['Tariff'] = df['Tariff'].fillna(0)  # Fill NaN in 'Tariff' with 0
 required_columns = ['Country', 'Population']
-existing_required = [col for col in required_columns if col in df.columns]
-df = df.dropna(subset=existing_required)
+df = df.dropna(subset=required_columns)  # Drop rows with missing required columns
+df = df.drop_duplicates()  # Remove duplicates
 
-# Drop duplicate rows
-df = df.drop_duplicates()
+# Display cleaned data
+st.subheader("Cleaned Data")
+st.write(df)
 
-print("\nData cleaned. New shape:", df.shape)
+# Basic Statistical Summary
+st.subheader("Basic Statistical Summary")
+st.write(df.describe())
 
-# Step 6: Basic Statistical Summary
-print(df.describe())
-
-# Step 7: Grouped Analysis (if applicable)
+# Grouped Analysis (Average Tariff per Region)
 if 'Region' in df.columns and 'Tariff' in df.columns:
     region_avg_tariff = df.groupby('Region')['Tariff'].mean().sort_values(ascending=False)
-    print("\nAverage Tariff per Region:\n", region_avg_tariff)
+    st.subheader("Average Tariff per Region")
+    st.write(region_avg_tariff)
 else:
-    print("\nℹ 'Region' and 'Tariff' columns not found for grouped analysis.")
+    st.info("ℹ 'Region' and 'Tariff' columns not found for grouped analysis.")
 
-# Step 8: Visualization (Optional)
+# Visualization
 if 'Region' in df.columns and 'Tariff' in df.columns:
-    region_avg_tariff.plot(kind='bar', figsize=(10, 6), title='Average Tariff per Region')
+    st.subheader("Average Tariff per Region - Bar Chart")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    region_avg_tariff.plot(kind='bar', ax=ax)
     plt.ylabel('Average Tariff')
     plt.xlabel('Region')
     plt.xticks(rotation=45)
-    plt.grid(axis='y')
     plt.tight_layout()
-    plt.show()
+    st.pyplot(fig)
